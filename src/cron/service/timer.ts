@@ -1,3 +1,4 @@
+import { emitCronJobErrorBundle } from "../../daemon/error-feedback/emit-on-error.js";
 import type { HeartbeatRunResult } from "../../infra/heartbeat-wake.js";
 import { DEFAULT_AGENT_ID } from "../../routing/session-key.js";
 import { resolveCronDeliveryPlan } from "../delivery.js";
@@ -80,6 +81,15 @@ function applyJobResult(
   // Track consecutive errors for backoff / auto-disable.
   if (result.status === "error") {
     job.state.consecutiveErrors = (job.state.consecutiveErrors ?? 0) + 1;
+    // Emit an error bundle for the error feedback daemon to pick up.
+    void emitCronJobErrorBundle({
+      jobId: job.id,
+      jobName: job.name,
+      agentId: job.agentId,
+      sessionKey: job.sessionKey,
+      message: job.payload.kind === "agentTurn" ? job.payload.message : undefined,
+      error: result.error ?? "unknown error",
+    });
   } else {
     job.state.consecutiveErrors = 0;
   }

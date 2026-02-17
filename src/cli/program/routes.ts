@@ -234,6 +234,31 @@ const routeModelsStatus: RouteSpec = {
   },
 };
 
+const routeErrorFeedback: RouteSpec = {
+  match: (path) => path[0] === "error-feedback",
+  run: async (argv) => {
+    const positionals = getCommandPositionals(argv);
+    const action = positionals[1] as "start" | "stop" | "status" | "cleanup" | undefined;
+    if (!action || !["start", "stop", "status", "cleanup"].includes(action)) {
+      return false;
+    }
+    const json = hasFlag(argv, "--json");
+    const pollIntervalRaw = getFlagValue(argv, "--poll-interval");
+    if (pollIntervalRaw === null) {
+      return false;
+    }
+    const pollIntervalMs = pollIntervalRaw ? parseInt(pollIntervalRaw, 10) : undefined;
+    const maxAgeRaw = getFlagValue(argv, "--max-age");
+    if (maxAgeRaw === null) {
+      return false;
+    }
+    const maxAge = maxAgeRaw ?? undefined;
+    const { errorFeedbackCommand } = await import("../../commands/error-feedback.js");
+    await errorFeedbackCommand({ action, json, pollIntervalMs, maxAge }, defaultRuntime);
+    return true;
+  },
+};
+
 const routes: RouteSpec[] = [
   routeHealth,
   routeStatus,
@@ -244,6 +269,7 @@ const routes: RouteSpec[] = [
   routeConfigUnset,
   routeModelsList,
   routeModelsStatus,
+  routeErrorFeedback,
 ];
 
 export function findRoutedCommand(path: string[]): RouteSpec | null {

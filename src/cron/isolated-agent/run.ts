@@ -5,6 +5,7 @@ import {
   resolveAgentWorkspaceDir,
   resolveDefaultAgentId,
 } from "../../agents/agent-scope.js";
+import { emitSkillErrorBundle } from "../../daemon/error-feedback/emit-on-error.js";
 import { runCliAgent } from "../../agents/cli-runner.js";
 import { getCliSessionId, setCliSessionId } from "../../agents/cli-session.js";
 import { lookupContextTokens } from "../../agents/context.js";
@@ -464,6 +465,15 @@ export async function runCronIsolatedAgentTurn(params: {
     fallbackModel = fallbackResult.model;
     runEndedAt = Date.now();
   } catch (err) {
+    // Emit error bundle for the error feedback daemon.
+    void emitSkillErrorBundle({
+      skillName: params.job.name,
+      agentId,
+      sessionKey: agentSessionKey,
+      workspaceDir,
+      command: commandBody,
+      error: err,
+    });
     return withRunSession({ status: "error", error: String(err) });
   }
 
